@@ -1,4 +1,5 @@
 from cmu_graphics import *
+import random
 
 def onAppStart(app):
     # Shared state
@@ -7,8 +8,34 @@ def onAppStart(app):
     app.screen = 'start'  # Initial screen
     app.soundURL = ""
     app.selectedCategories = []
-    app.categories = ["Category 1", "Category 2", "Category 3"]
+    app.categories = [
+        "Tempo", "Beats per Minute", "Duration", "Tone", "Key",
+        "Dominant Timbres", "Rhythms", "Harmony", "Melody", "Pitch",
+        "Volume", "Chords", "Structure", "Dynamics", "Mood",
+        "Genre", "Instrumentation", "Phrasing", "Articulation", "Texture"
+    ]
+    app.categoryColors = [
+        "lightpink", "lavender", "lightblue", "thistle", "plum", "powderblue"
+    ]
     app.promptingSoundURL = True
+
+############################################################
+# Helper Functions for Rounded Buttons
+############################################################
+
+def drawRoundedRect(x, y, width, height, fill):
+    """Draw a rounded rectangle with circles at each corner."""
+    cornerRadius = min(width, height) // 4
+    drawRect(x + cornerRadius, y, width - 2 * cornerRadius, height, fill=fill)  # Middle rectangle
+    drawRect(x, y + cornerRadius, width, height - 2 * cornerRadius, fill=fill)  # Vertical bars
+    drawCircle(x + cornerRadius, y + cornerRadius, cornerRadius, fill=fill)  # Top-left corner
+    drawCircle(x + width - cornerRadius, y + cornerRadius, cornerRadius, fill=fill)  # Top-right corner
+    drawCircle(x + cornerRadius, y + height - cornerRadius, cornerRadius, fill=fill)  # Bottom-left corner
+    drawCircle(x + width - cornerRadius, y + height - cornerRadius, cornerRadius, fill=fill)  # Bottom-right corner
+
+def getTextWidth(text, fontSize):
+    """Estimate text width based on character count and font size."""
+    return len(text) * fontSize * 0.6
 
 ############################################################
 # Progress Bar and Navigation Helper
@@ -37,9 +64,9 @@ def drawProgressBar(app):
     # Draw arrows
     arrowSize = 20
     if app.screen != 'start':  # Show left arrow
-        drawLabel('<', 100, barY, size=arrowSize, fill='white')
+        drawLabel('<', 100, barY, size=arrowSize, fill='white', font='verdana')
     if app.screen != 'analyze':  # Show right arrow
-        drawLabel('>', app.width - 100, barY, size=arrowSize, fill='white')
+        drawLabel('>', app.width - 100, barY, size=arrowSize, fill='white', font='verdana')
 
 def handleProgressBarClick(app, mouseX, mouseY):
     barY = app.height - 50
@@ -60,11 +87,11 @@ def handleProgressBarClick(app, mouseX, mouseY):
 
 def drawStartScreen(app):
     drawRect(0, 0, app.width, app.height, fill='black')  # Darker background
-    drawLabel('Input Sound URL', 20, 30, size=36, bold=True, fill='white', align='left')
-    drawLabel('Enter a sound file URL (http or cmu://):', app.width / 2, 200, size=24, fill='white', align='center')
-    drawLabel(app.soundURL, app.width / 2, 250, size=20, fill='white', align='center')
-    drawRect(300, 400, 200, 50, fill='gray', border='white')
-    drawLabel('Next', 400, 425, size=24, fill='white')
+    drawLabel('Input Sound URL', 20, 30, size=36, bold=True, fill='white', align='left', font='impact')
+    drawLabel('Enter a sound file URL (http or cmu://):', app.width / 2, 200, size=24, fill='white', align='center', font='verdana')
+    drawLabel(app.soundURL, app.width / 2, 250, size=20, fill='white', align='center', font='verdana')
+    drawRoundedRect(300, 400, 200, 50, fill='lavender')
+    drawLabel('Next', 400, 425, size=24, fill='white', font='verdana')
     drawProgressBar(app)
 
 def handleStartKeyPress(app, key):
@@ -87,26 +114,46 @@ def handleStartMousePress(app, mouseX, mouseY):
 
 def drawCategoryScreen(app):
     drawRect(0, 0, app.width, app.height, fill='black')  # Darker background
-    drawLabel('Select Categories', 20, 30, size=36, bold=True, fill='white', align='left')
-    y = 200
+    drawLabel('Select Categories', 20, 30, size=36, bold=True, fill='white', align='left', font='impact')
+    y = 100
+    x = 50
+    maxRowWidth = app.width - 50
+
     for i, category in enumerate(app.categories):
-        isSelected = category in app.selectedCategories
-        drawRect(300, y, 200, 50, fill='green' if isSelected else 'gray', border='white')
-        drawLabel(category, 400, y + 25, size=20, fill='white' if isSelected else 'black')
-        y += 80
-    drawRect(300, 700, 200, 50, fill='gray', border='white')
-    drawLabel('Analyze', 400, 725, size=24, fill='white')
+        textWidth = getTextWidth(category, 20) + 40  # Button width based on text
+        color = random.choice(app.categoryColors)
+
+        # Adjust row when exceeding the width
+        if x + textWidth > maxRowWidth:
+            x = 50
+            y += 70
+
+        drawRoundedRect(x, y, textWidth, 50, fill=color)
+        drawLabel(category, x + textWidth / 2, y + 25, size=20, fill='black', font='verdana')
+        x += textWidth + 20
+
+    drawRoundedRect(300, 700, 200, 50, fill='lavender')
+    drawLabel('Analyze', 400, 725, size=24, fill='white', font='verdana')
     drawProgressBar(app)
 
 def handleCategoryMousePress(app, mouseX, mouseY):
-    y = 200
-    for i, category in enumerate(app.categories):
-        if 300 <= mouseX <= 500 and y <= mouseY <= y + 50:
+    y = 100
+    x = 50
+    maxRowWidth = app.width - 50
+
+    for category in app.categories:
+        textWidth = getTextWidth(category, 20) + 40
+        if x + textWidth > maxRowWidth:
+            x = 50
+            y += 70
+
+        if x <= mouseX <= x + textWidth and y <= mouseY <= y + 50:
             if category in app.selectedCategories:
                 app.selectedCategories.remove(category)
             else:
                 app.selectedCategories.append(category)
-        y += 80
+        x += textWidth + 20
+
     if 300 <= mouseX <= 500 and 700 <= mouseY <= 750:  # Analyze button
         app.screen = 'analyze'
     handleProgressBarClick(app, mouseX, mouseY)
@@ -117,15 +164,15 @@ def handleCategoryMousePress(app, mouseX, mouseY):
 
 def drawAnalyzeScreen(app):
     drawRect(0, 0, app.width, app.height, fill='black')  # Darker background
-    drawLabel('Analyze Results', 20, 30, size=36, bold=True, fill='white', align='left')
-    drawLabel(f'Sound File URL: {app.soundURL}', app.width / 2, 200, size=20, fill='white', align='center')
-    drawLabel('Selected Categories:', app.width / 2, 300, size=24, fill='white', align='center')
+    drawLabel('Analyze Results', 20, 30, size=36, bold=True, fill='white', align='left', font='impact')
+    drawLabel(f'Sound File URL: {app.soundURL}', app.width / 2, 200, size=20, fill='white', align='center', font='verdana')
+    drawLabel('Selected Categories:', app.width / 2, 300, size=24, fill='white', align='center', font='verdana')
     y = 350
     for category in app.selectedCategories:
-        drawLabel(f'- {category}', app.width / 2, y, size=20, fill='white', align='center')
+        drawLabel(f'- {category}', app.width / 2, y, size=20, fill='white', align='center', font='verdana')
         y += 40
-    drawRect(300, 700, 200, 50, fill='gray', border='white')
-    drawLabel('Back to Start', 400, 725, size=24, fill='white')
+    drawRoundedRect(300, 700, 200, 50, fill='lavender')
+    drawLabel('Back to Start', 400, 725, size=24, fill='white', font='verdana')
     drawProgressBar(app)
 
 def handleAnalyzeMousePress(app, mouseX, mouseY):
